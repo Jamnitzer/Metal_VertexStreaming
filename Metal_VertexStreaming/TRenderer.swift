@@ -151,12 +151,12 @@ class TRenderer :  MetalViewProtocol, TViewControllerDelegate
     
     let sizeof_vData = 36 * sizeof(Float)
     //------------------------------------------------------------
-    // this value will cycle from 0 to g_max_inflight_buffers whenever
-    // a display completes ensuring renderer clients
-    // can synchronize between g_max_inflight_buffers count buffers,
+    // this value will cycle from 0 to g_max_inflight_buffers (3)
+    // whenever a display completes, ensuring renderer clients
+    // can synchronize between g_max_inflight_buffers buffers,
     // and thus avoiding a constant buffer from being overwritten between draws
     //------------------------------------------------------------
-    var constantDataBufferIndex:Int = 0
+    var constantDataBufferIndex:Int = 0 // renderFrameCycle [0, 1, 2]
     
     //------------------------------------------------------------
     // These queries exist so the View can initialize a
@@ -207,7 +207,7 @@ class TRenderer :  MetalViewProtocol, TViewControllerDelegate
             assert(false, ">> ERROR: Couldnt create a default shader library")
         }
         
-        constantDataBufferIndex = 0
+        constantDataBufferIndex = 0 // renderFrameCycle
         inflightSemaphore = dispatch_semaphore_create(kInFlightCommandBuffers)
     }
     //--------------------------------------------------------------------------
@@ -236,6 +236,8 @@ class TRenderer :  MetalViewProtocol, TViewControllerDelegate
         {
             println(">> ERROR: Couldnt load fragment function from default library")
         }
+        //------------------------------------------------------------
+        // MAKE THE BUFFER BIG ENOUGH FOR 3 RENDER FRAME CYCLES.
         //------------------------------------------------------------
         // set the vertex shader and buffers defined in the shader source,
         // in this case we have 2 inputs. A position buffer and a color buffer
@@ -274,9 +276,13 @@ class TRenderer :  MetalViewProtocol, TViewControllerDelegate
         //  set context state
         renderEncoder.setRenderPipelineState(pipelineState!)
         
-        renderEncoder.setVertexBuffer(
+        //------------------------------------------------------------
+        // this is the key line for this technique.
+        // the current vertexBuffer is offset per frame [0..3]
+        //------------------------------------------------------------
+       renderEncoder.setVertexBuffer(
             vertexBuffer!,
-            offset: Int(256 * constantDataBufferIndex),
+            offset: Int(256 * constantDataBufferIndex), // renderFrameCycle
             atIndex: Int(0) )
         
         renderEncoder.setVertexBuffer(vertexColorBuffer!,
@@ -344,10 +350,11 @@ class TRenderer :  MetalViewProtocol, TViewControllerDelegate
             // release the semaphore to keep things synchronized even if we couldnt render
             dispatch_semaphore_signal(inflightSemaphore)
         }
-        
+        //--------------------------------------------------------------------------
         // the renderview assumes it can now increment the buffer index
         // and that the previous index wont be touched
-        // until we cycle back around to the same index
+        // until we cycle back around to the same index // renderFrameCycle
+        //--------------------------------------------------------------------------
         constantDataBufferIndex = (constantDataBufferIndex + 1) % kInFlightCommandBuffers
     }
     //--------------------------------------------------------------------------
@@ -362,8 +369,12 @@ class TRenderer :  MetalViewProtocol, TViewControllerDelegate
     {
         var bufferPointer = vertexBuffer!.contents()
         
-        var vData:UnsafeMutablePointer<Void> =
-        bufferPointer + 256 * constantDataBufferIndex
+        //------------------------------------------------------------
+        // this is a key line for this technique.
+        // the destination buffer is offset by frame index.
+        //------------------------------------------------------------
+       var vData:UnsafeMutablePointer<Void> =
+                    bufferPointer + 256 * constantDataBufferIndex // renderFrameCycle
         
         // reset the vertex data in the shared cpu/gpu buffer
         // each frame and just accumulate offsets below
