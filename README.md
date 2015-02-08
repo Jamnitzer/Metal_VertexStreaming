@@ -6,7 +6,7 @@ This sample shows how to stream vertex data between 3 command buffers using one 
 
 ***
 
-The key to this example is the staggered rendered and updating. 
+The key to this example is the staggered rendering and updating. 
 When the Renderer is configured we create a buffer 3 times bigger
 than needed for a single frame.
 
@@ -22,8 +22,9 @@ than needed for a single frame.
 ***
 
 
-For each renderFrame we copy our vertex data into a different part of our vertexBuffer.
-This allows for 256 bytes for the current vertex data.    
+For each renderFrameCycle [0, 1, 2] copy our vertexData into a different part of the vertexBuffer.
+This example uses 256 bytes for the our vertexData.
+  
 ***
     func update(controller:TViewController)
     {
@@ -46,14 +47,14 @@ This allows for 256 bytes for the current vertex data.
 ***
 
 
-This code tells the shader to look for vertex data.
+This code tells the shader where to receive the vertex data.
 
 ***
     //--------------------------------------------------------------------------
     func renderTriangle(renderEncoder:MTLRenderCommandEncoder, view:TView, name:String)
     {
         //------------------------------------------------------------
-        // the current vertexBuffer is offset per renderFrame [0, 1, 2]
+        // the current vertexBuffer is offset per renderFrameCycle [0, 1, 2]
         //------------------------------------------------------------
        renderEncoder.setVertexBuffer(
             vertexBuffer!,
@@ -65,9 +66,8 @@ This code tells the shader to look for vertex data.
 note: I renamed this variable to renderFrameCycle.
 The original program calls this variable constantDataBufferIndex.  
 Which kind of weird since Index is a variable that changes every frame.
-And we copy new data into the constantDataBuffer each frame.  
-What is constant is the location of the vertexBuffer.
-
+And we copy new data into the DataBuffer each frame.  
+The only thing that is constant is the location of the vertexBuffer.
 
 
 
