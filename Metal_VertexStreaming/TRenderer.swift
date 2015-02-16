@@ -105,40 +105,40 @@ struct V3f
 }
 //------------------------------------------------------------------------------
 var vertexData:[V4f] = [
-    V4f(-1.0, -1.0, 0.0, 1.0),
+    V4f(-1.0, -1.0, 0.0, 1.0),  // background blue half screen.
     V4f(-1.0,  1.0, 0.0, 1.0),
     V4f( 1.0, -1.0, 0.0, 1.0),
     
-    V4f( 1.0, -1.0, 0.0, 1.0),
+    V4f( 1.0, -1.0, 0.0, 1.0),  // background blue half screen.
     V4f(-1.0,  1.0, 0.0, 1.0),
     V4f( 1.0,  1.0, 0.0, 1.0),
     
-    V4f(-0.0,   0.25, 0.0, 1.0 ),
+    V4f(-0.0,   0.25, 0.0, 1.0 ),  // animated triangle.
     V4f(-0.25, -0.25, 0.0, 1.0),
     V4f( 0.25, -0.25, 0.0, 1.0),
 ]
 //------------------------------------------------------------------------------
 var vertexColorData:[V4f] = [
-    V4f( 0.0, 0.0, 1.0, 1.0 ),
-    V4f( 0.0, 0.0, 1.0, 1.0 ),
-    V4f( 0.0, 0.0, 1.0, 1.0 ),
-    
-    V4f( 0.0, 0.0, 1.0, 1.0 ),
+    V4f( 0.0, 0.0, 1.0, 1.0 ),  // background blue
     V4f( 0.0, 0.0, 1.0, 1.0 ),
     V4f( 0.0, 0.0, 1.0, 1.0 ),
     
+    V4f( 0.0, 0.0, 1.0, 1.0 ),   // background blue
     V4f( 0.0, 0.0, 1.0, 1.0 ),
-    V4f( 0.0, 1.0, 0.0, 1.0 ),
-    V4f( 1.0, 0.0, 0.0, 1.0 ),
+    V4f( 0.0, 0.0, 1.0, 1.0 ),
+    
+    V4f( 0.0, 0.0, 1.0, 1.0 ),  // blue - triangle point color
+    V4f( 0.0, 1.0, 0.0, 1.0 ),  // green - triangle point color
+    V4f( 1.0, 0.0, 0.0, 1.0 ),  // red - triangle point color
 ]
 //------------------------------------------------------------------------------
 // Current animated triangle offsets.
-var xOffset = V3f( -1.0, 1.0, -1.0 )
-var yOffset = V3f(  1.0, 0.0, -1.0 )
+var xOffset = V3f( -1.0, 1.0, -1.0 )   // offset of three triangle points.
+var yOffset = V3f(  1.0, 0.0, -1.0 )   // offset of three triangle points.
 
 // Current vertex deltas
-var xDelta = V3f( 0.02, -0.01, 0.03 )
-var yDelta = V3f( 0.01,  0.02, -0.01 )
+var xDelta = V3f( 0.02, -0.01, 0.03 )   // change of each triangle point.
+var yDelta = V3f( 0.01,  0.02, -0.01 )  // change of each triangle point.
 
 
 //------------------------------------------------------------------------------
@@ -148,15 +148,16 @@ class TRenderer :  MetalViewProtocol, TViewControllerDelegate
     // renderer will create a default device at init time.
     //------------------------------------------------------------
     var device:MTLDevice?
-    
+
     let sizeof_vData = 36 * sizeof(Float)
+
     //------------------------------------------------------------
     // this value will cycle from 0 to g_max_inflight_buffers (3)
     // whenever a display completes, ensuring renderer clients
     // can synchronize between g_max_inflight_buffers buffers,
     // and thus avoiding a constant buffer from being overwritten between draws
     //------------------------------------------------------------
-    var constantDataBufferIndex:Int = 0 // renderFrameCycle [0, 1, 2]
+    var renderFrameCycle:Int = 0 // renderFrameCycle [0, 1, 2]
     
     //------------------------------------------------------------
     // These queries exist so the View can initialize a
@@ -184,6 +185,13 @@ class TRenderer :  MetalViewProtocol, TViewControllerDelegate
     //--------------------------------------------------------------------------
     init()
     {
+        let num_triangles = 3
+        let points_per_triangle = 3
+        let floats_per_point = 4
+        let float_count = num_triangles * points_per_triangle * floats_per_point
+
+        sizeof_vData = float_count * sizeof(Float)
+
         sampleCount = 4
         depthPixelFormat = MTLPixelFormat.Invalid
         stencilPixelFormat = MTLPixelFormat.Invalid
@@ -207,7 +215,7 @@ class TRenderer :  MetalViewProtocol, TViewControllerDelegate
             assert(false, ">> ERROR: Couldnt create a default shader library")
         }
         
-        constantDataBufferIndex = 0 // renderFrameCycle
+        renderFrameCycle = 0 // renderFrameCycle
         inflightSemaphore = dispatch_semaphore_create(kInFlightCommandBuffers)
     }
     //--------------------------------------------------------------------------
@@ -282,7 +290,7 @@ class TRenderer :  MetalViewProtocol, TViewControllerDelegate
         //------------------------------------------------------------
        renderEncoder.setVertexBuffer(
             vertexBuffer!,
-            offset: Int(256 * constantDataBufferIndex), // renderFrameCycle
+            offset: Int(256 * renderFrameCycle), // renderFrameCycle
             atIndex: Int(0) )
         
         renderEncoder.setVertexBuffer(vertexColorBuffer!,
@@ -355,7 +363,7 @@ class TRenderer :  MetalViewProtocol, TViewControllerDelegate
         // and that the previous index wont be touched
         // until we cycle back around to the same index // renderFrameCycle
         //--------------------------------------------------------------------------
-        constantDataBufferIndex = (constantDataBufferIndex + 1) % kInFlightCommandBuffers
+        renderFrameCycle = (renderFrameCycle + 1) % kInFlightCommandBuffers
     }
     //--------------------------------------------------------------------------
     func reshape(view:TView)
@@ -374,7 +382,7 @@ class TRenderer :  MetalViewProtocol, TViewControllerDelegate
         // the destination buffer is offset by frame index.
         //------------------------------------------------------------
        var vData:UnsafeMutablePointer<Void> =
-                    bufferPointer + 256 * constantDataBufferIndex // renderFrameCycle
+                    bufferPointer + 256 * renderFrameCycle // renderFrameCycle
         
         // reset the vertex data in the shared cpu/gpu buffer
         // each frame and just accumulate offsets below
@@ -385,7 +393,7 @@ class TRenderer :  MetalViewProtocol, TViewControllerDelegate
         //------------------------------------------------------------------
         var vDataV4f = UnsafeMutablePointer<V4f>(vData)
         
-        for (var j:Int = 0; j < 3; j++)
+        for (var j:Int = 0; j < 3; j++)  // offset points A, B, C
         {
             xOffset[j] += xDelta[j]
             if (xOffset[j] >= 1.0 || xOffset[j] <= -1.0)
@@ -404,7 +412,7 @@ class TRenderer :  MetalViewProtocol, TViewControllerDelegate
             //------------------------------------------------------------------
             // Update last triangle position directly in the shared cpu/gpu buffer
             //------------------------------------------------------------------
-            vDataV4f[6+j].x = xOffset[j]
+            vDataV4f[6+j].x = xOffset[j] // 6 means we skip over the first 2 triangles.
             vDataV4f[6+j].y = yOffset[j]
         }
     }
