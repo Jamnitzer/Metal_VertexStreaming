@@ -73,19 +73,18 @@ class TViewController: UIViewController
     // our renderer instance
     var renderer:TRenderer?
 
-    
     //-------------------------------------------------------------------------
-    override init()
-    {
-        super.init()
-        initCommon()
-    }
+//    override init()
+//    {
+//        super.init()
+//        initCommon()
+//    }
     //-------------------------------------------------------------------------
     // called when loaded from nib
     //-------------------------------------------------------------------------
     override init(nibName nibNameOrNil: String?, bundle nibBundleOrNil: NSBundle?)
     {
-        super.init(nibName: nibNameOrNil?, bundle: nibBundleOrNil?)
+        super.init(nibName: nibNameOrNil, bundle: nibBundleOrNil)
         initCommon()
     }
     //-------------------------------------------------------------------------
@@ -141,7 +140,7 @@ class TViewController: UIViewController
     {
         super.viewDidLoad()
 
-        let renderView:TView = self.view as TView
+        let renderView:TView = self.view as! TView
             renderView.delegate = renderer
         
         // load all renderer assets before starting game loop
@@ -189,7 +188,7 @@ class TViewController: UIViewController
         // call the display method directly on the render view
         // (setNeedsDisplay: has been disabled in the renderview by default)
         
-        let myview:TView = self.view as TView
+        let myview:TView = self.view as! TView
         myview.display()
     }
     //-------------------------------------------------------------------------
@@ -203,7 +202,7 @@ class TViewController: UIViewController
         }
     }
     //-------------------------------------------------------------------------
-    func setPaused(pause:Bool)
+    func set_Paused(pause:Bool)
     {
         if (_gameLoopPaused == true)
         {
@@ -220,7 +219,7 @@ class TViewController: UIViewController
                 timer!.paused   = true
                 
                 // ask the view to release textures until its resumed
-                let myview:TView = self.view as TView
+                let myview:TView = self.view as! TView
                 myview.releaseTextures()
            }
             else
@@ -238,12 +237,12 @@ class TViewController: UIViewController
     //-------------------------------------------------------------------------
     func didEnterBackground(notification:NSNotification)
     {
-        self.setPaused(true)
+        self.set_Paused(true)
     }
     //-------------------------------------------------------------------------
     func willEnterForeground(notification:NSNotification)
     {
-        self.setPaused(false)
+        self.set_Paused(false)
     }
     //-------------------------------------------------------------------------
     override func viewWillAppear(animated:Bool)

@@ -149,7 +149,7 @@ class TRenderer :  MetalViewProtocol, TViewControllerDelegate
     //------------------------------------------------------------
     var device:MTLDevice?
 
-    let sizeof_vData = 36 * sizeof(Float)
+    var sizeof_vData = 36 * sizeof(Float)
 
     //------------------------------------------------------------
     // this value will cycle from 0 to g_max_inflight_buffers (3)
@@ -175,7 +175,7 @@ class TRenderer :  MetalViewProtocol, TViewControllerDelegate
     //--------------------------------------------------------------------------
     var commandQueue:MTLCommandQueue?
     var defaultLibrary:MTLLibrary?
-    let inflightSemaphore = dispatch_semaphore_create(kInFlightCommandBuffers)
+    var inflightSemaphore = dispatch_semaphore_create(kInFlightCommandBuffers)
     
     // render stage
     var pipelineState:MTLRenderPipelineState?
@@ -308,7 +308,7 @@ class TRenderer :  MetalViewProtocol, TViewControllerDelegate
         renderEncoder.popDebugGroup()
     }
     //--------------------------------------------------------------------------
-    func render(view:TView)
+    @objc func render(view:TView)
     {
         dispatch_semaphore_wait(inflightSemaphore, DISPATCH_TIME_FOREVER)
         
@@ -366,14 +366,14 @@ class TRenderer :  MetalViewProtocol, TViewControllerDelegate
         renderFrameCycle = (renderFrameCycle + 1) % kInFlightCommandBuffers
     }
     //--------------------------------------------------------------------------
-    func reshape(view:TView)
+    @objc func reshape(view:TView)
     {
         // unused in this sample
     }
     //--------------------------------------------------------------------------
     // mark VIEW CONTROLLER DELEGATE METHODS
-    //--------------------------------------------------------------------------
-    func update(controller:TViewController)
+    //-------------------------------------------------------------------------@objc -
+    @objc func update(controller:TViewController)
     {
         var bufferPointer = vertexBuffer!.contents()
         
@@ -386,7 +386,7 @@ class TRenderer :  MetalViewProtocol, TViewControllerDelegate
         
         // reset the vertex data in the shared cpu/gpu buffer
         // each frame and just accumulate offsets below
-        memcpy(vData, vertexData, UInt(sizeof_vData))
+        memcpy(vData, vertexData, Int(sizeof_vData))
         
         //------------------------------------------------------------------
         // Animate triangle offsets
@@ -416,8 +416,8 @@ class TRenderer :  MetalViewProtocol, TViewControllerDelegate
             vDataV4f[6+j].y = yOffset[j]
         }
     }
-    //--------------------------------------------------------------------------
-    func viewController(controller:TViewController, willPause:Bool)
+    //-------------------------------------------------------------------------@objc -
+    @objc func viewController(controller:TViewController, willPause:Bool)
     {
         // timer is suspended/resumed
         // Can do any non-rendering related background work here when suspended
