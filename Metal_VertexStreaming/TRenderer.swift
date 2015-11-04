@@ -238,11 +238,11 @@ class TRenderer :  MetalViewProtocol, TViewControllerDelegate
         
         if (vertexProgram == nil)
         {
-            println(">> ERROR: Couldnt load vertex function from default library")
+            print(">> ERROR: Couldnt load vertex function from default library")
         }
         if (fragmentProgram == nil)
         {
-            println(">> ERROR: Couldnt load fragment function from default library")
+            print(">> ERROR: Couldnt load fragment function from default library")
         }
         //------------------------------------------------------------
         // MAKE THE BUFFER BIG ENOUGH FOR 3 RENDER FRAME CYCLES.
@@ -251,7 +251,8 @@ class TRenderer :  MetalViewProtocol, TViewControllerDelegate
         // in this case we have 2 inputs. A position buffer and a color buffer
         // Allocate a buffer to store vertex position data (we'll quad buffer this one)
         //------------------------------------------------------------
-        vertexBuffer = device!.newBufferWithLength( kMaxBufferBytesPerFrame, options: nil)
+        vertexBuffer = device!.newBufferWithLength( kMaxBufferBytesPerFrame,
+            options: .CPUCacheModeDefaultCache)
         vertexBuffer!.label = "Vertices"
         
         //------------------------------------------------------------
@@ -259,7 +260,7 @@ class TRenderer :  MetalViewProtocol, TViewControllerDelegate
         //------------------------------------------------------------
         vertexColorBuffer = device!.newBufferWithBytes(vertexColorData,
             length: sizeof_vData,
-            options: nil)
+            options: .CPUCacheModeDefaultCache)
         vertexColorBuffer!.label = "colors"
         
         //------------------------------------------------------------
@@ -269,13 +270,19 @@ class TRenderer :  MetalViewProtocol, TViewControllerDelegate
         pipelineStateDescriptor.label = "MyPipeline"
         pipelineStateDescriptor.colorAttachments[0].pixelFormat = .BGRA8Unorm
         pipelineStateDescriptor.sampleCount      = sampleCount
-        pipelineStateDescriptor.vertexFunction   = vertexProgram
+        pipelineStateDescriptor.vertexFunction   = vertexProgram!
         pipelineStateDescriptor.fragmentFunction = fragmentProgram
         
-        var pipelineError : NSError?
-        pipelineState = device!.newRenderPipelineStateWithDescriptor(
-            pipelineStateDescriptor, error: &pipelineError)
-    }
+        do {
+            self.pipelineState = try
+                device!.newRenderPipelineStateWithDescriptor(pipelineStateDescriptor)
+        }
+        catch let pipelineError as NSError
+        {
+            self.pipelineState = nil
+            print("Failed to create pipeline state, error \(pipelineError)")
+        }
+}
     //--------------------------------------------------------------------------
     func renderTriangle(renderEncoder:MTLRenderCommandEncoder, view:TView, name:String)
     {
@@ -375,13 +382,13 @@ class TRenderer :  MetalViewProtocol, TViewControllerDelegate
     //-------------------------------------------------------------------------@objc -
     @objc func update(controller:TViewController)
     {
-        var bufferPointer = vertexBuffer!.contents()
+        let bufferPointer = vertexBuffer!.contents()
         
         //------------------------------------------------------------
         // this is a key line for this technique.
         // the destination buffer is offset by frame index.
         //------------------------------------------------------------
-       var vData:UnsafeMutablePointer<Void> =
+       let vData:UnsafeMutablePointer<Void> =
                     bufferPointer + 256 * renderFrameCycle // renderFrameCycle
         
         // reset the vertex data in the shared cpu/gpu buffer
@@ -391,7 +398,7 @@ class TRenderer :  MetalViewProtocol, TViewControllerDelegate
         //------------------------------------------------------------------
         // Animate triangle offsets
         //------------------------------------------------------------------
-        var vDataV4f = UnsafeMutablePointer<V4f>(vData)
+        let vDataV4f = UnsafeMutablePointer<V4f>(vData)
         
         for (var j:Int = 0; j < 3; j++)  // offset points A, B, C
         {
